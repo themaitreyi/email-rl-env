@@ -17,20 +17,46 @@ class EmailEnv(gym.Env):
         self.correct_label = None
 
     def generate_email(self):
-        # Random email features
-        is_urgent = random.choice([0, 1])
-        is_work = random.choice([0, 1])
-        is_spammy = random.choice([0, 1])
+        difficulty = random.choice(["easy", "medium", "hard"])
 
-        state = np.array([is_urgent, is_work, is_spammy], dtype=np.float32)
+        if difficulty == "easy":
+            is_spammy = random.choice([0, 1])
+            if is_spammy:
+                state = np.array([0, 0, 1], dtype=np.float32)
+                label = 2
+            else:
+                state = np.array([1, 1, 0], dtype=np.float32)
+                label = 0
 
-        # Define correct label
-        if is_spammy:
-            label = 2  # Spam
-        elif is_urgent or is_work:
-            label = 0  # Important
-        else:
-            label = 1  # Normal
+        elif difficulty == "medium":
+            is_urgent = random.choice([0, 1])
+            is_work = random.choice([0, 1])
+            is_spammy = random.choice([0, 1])
+
+            state = np.array([is_urgent, is_work, is_spammy], dtype=np.float32)
+
+            if is_spammy:
+                label = 2
+            elif is_urgent or is_work:
+                label = 0
+            else:
+                label = 1
+
+        else:  # hard
+            state = np.array([
+                random.choice([0, 1]),
+                random.choice([0, 1]),
+                random.choice([0, 1])
+            ], dtype=np.float32)
+
+            if state[2] == 1 and state[0] == 1:
+                label = 1
+            elif state[2] == 1:
+                label = 2
+            elif state[0] == 1 or state[1] == 1:
+                label = 0
+            else:
+                label = 1
 
         return state, label
 
@@ -39,11 +65,20 @@ class EmailEnv(gym.Env):
         return self.state
 
     def step(self, action):
-        # Reward logic
+        reward = 0
+
+        # Perfect match
         if action == self.correct_label:
-            reward = 10
+            reward = 1.0
+
+        # Partial correctness
         else:
-            reward = -5
+            if self.correct_label == 2 and action == 1:
+                reward = 0.3
+            elif self.correct_label == 0 and action == 1:
+                reward = 0.5
+            else:
+                reward = 0.0
 
         done = True
 
