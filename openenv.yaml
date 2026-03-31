@@ -1,0 +1,33 @@
+name: email-prioritization-env
+version: 1.0
+
+description: >
+  A reinforcement learning environment for classifying emails into
+  important, normal, or spam based on simple features.
+
+observation_space:
+  type: vector
+  shape: [3]
+  description:
+    - is_urgent
+    - is_work_related
+    - is_spammy
+
+action_space:
+  type: discrete
+  actions:
+    - important
+    - normal
+    - spam
+
+reward:
+  correct: 1.0
+  incorrect: 0.0
+
+tasks:
+  - name: easy
+    description: Clear distinction between spam and important emails
+  - name: medium
+    description: Mixed signals in email features
+  - name: hard
+    description: Conflicting features requiring better decision making
