@@ -93,3 +93,11 @@ Run evaluation:
 
 ```bash
 python evaluate.py
+
+## LLM Compatibility
+
+This environment is designed to be compatible with LLM-based agents.  
+The state is represented as a structured vector that can be interpreted as features of an email.  
+The agent's task is to select the correct classification action based on these features.  
+
+The reward function provides graded feedback, enabling both reinforcement learning agents and LLM-based decision systems to learn effective policies.
