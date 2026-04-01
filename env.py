@@ -2,22 +2,41 @@ import gym
 from gym import spaces
 import numpy as np
 import random
+from dataclasses import dataclass
+
+# Typed observation model
+@dataclass
+class Observation:
+    is_urgent: float
+    is_work: float
+    is_spammy: float
+
+# Typed action model
+@dataclass
+class Action:
+    label: int  # 0, 1, 2
 
 class EmailEnv(gym.Env):
     def __init__(self):
         super(EmailEnv, self).__init__()
 
-        # Actions: 0 = Important, 1 = Normal, 2 = Spam
         self.action_space = spaces.Discrete(3)
-
-        # State: [is_urgent, is_work, is_spammy]
         self.observation_space = spaces.Box(low=0, high=1, shape=(3,), dtype=np.float32)
 
-        self.state = None
+        self.state_vec = None
         self.correct_label = None
 
+        self.current_difficulty = None
+
+        self.step_count = 0
+        self.max_steps = 3
+        random.seed(42)
+        np.random.seed(42)
+
     def generate_email(self):
-        difficulty = random.choice(["easy", "medium", "hard"])
+        difficulty = self.current_difficulty
+        if difficulty is None:
+            difficulty = random.choice(["easy", "medium", "hard"])
 
         if difficulty == "easy":
             is_spammy = random.choice([0, 1])
@@ -42,7 +61,7 @@ class EmailEnv(gym.Env):
             else:
                 label = 1
 
-        else:  # hard
+        else:
             state = np.array([
                 random.choice([0, 1]),
                 random.choice([0, 1]),
@@ -60,18 +79,26 @@ class EmailEnv(gym.Env):
 
         return state, label
 
+    def state(self):
+        return Observation(
+            is_urgent=self.state_vec[0],
+            is_work=self.state_vec[1],
+            is_spammy=self.state_vec[2]
+        )
+
     def reset(self):
-        self.state, self.correct_label = self.generate_email()
-        return self.state
+        self.step_count = 0
+        self.state_vec, self.correct_label = self.generate_email()
+        return self.state_vec
 
     def step(self, action):
-        reward = 0
+        self.step_count += 1
 
-        # Perfect match
+        if isinstance(action, Action):
+            action = action.label
+
         if action == self.correct_label:
             reward = 1.0
-
-        # Partial correctness
         else:
             if self.correct_label == 2 and action == 1:
                 reward = 0.3
@@ -80,6 +107,14 @@ class EmailEnv(gym.Env):
             else:
                 reward = 0.0
 
-        done = True
+        done = self.step_count >= self.max_steps
 
-        return self.state, reward, done, {}
+        if not done:
+            self.state_vec, self.correct_label = self.generate_email()
+
+        info = {
+            "difficulty": self.current_difficulty,
+            "step": self.step_count
+        }
+
+        return self.state_vec, reward, done, info

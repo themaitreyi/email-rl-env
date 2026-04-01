@@ -74,3 +74,22 @@ This project is designed to be compatible with Meta's OpenEnv framework by defin
 * Use real-world email datasets
 * Train using Deep Q-Learning (DQN)
 * Deploy using Hugging Face Spaces
+
+## Task Levels
+
+The environment includes three difficulty levels:
+
+- Easy → Clear separation between spam and important emails  
+- Medium → Mixed feature signals  
+- Hard → Conflicting signals requiring better decision-making  
+
+---
+
+## Evaluation
+
+The agent is evaluated over multiple episodes using a rule-based policy.
+
+Run evaluation:
+
+```bash
+python evaluate.py

@@ -1,29 +1,17 @@
-from env import EmailEnv
+from tasks import evaluate_all_tasks
+import random
+import numpy as np
 
-def run_demo():
-    env = EmailEnv()
+# ensure reproducibility
+random.seed(42)
+np.random.seed(42)
 
-    episodes = 10
-    total_reward = 0
+def main():
+    results = evaluate_all_tasks()
 
-    for i in range(episodes):
-        state = env.reset()
-
-        is_urgent, is_work, is_spammy = state
-
-        if is_spammy == 1:
-            action = 2
-        elif is_urgent == 1 or is_work == 1:
-            action = 0
-        else:
-            action = 1
-
-        _, reward, _, _ = env.step(action)
-        total_reward += reward
-
-    avg_score = total_reward / episodes
-
-    return f"Average Score over {episodes} episodes: {avg_score}"
+    print("Hugging Face Demo Output:")
+    for task, score in results.items():
+        print(f"{task}: {score:.3f}")
 
 if __name__ == "__main__":
-    print(run_demo())
+    main()
