@@ -1,21 +1,22 @@
-import random
-import numpy as np
-
-random.seed(42)
-np.random.seed(42)
 from env import EmailEnv
 from tasks import evaluate_all_tasks
 import os
+import random
+import numpy as np
 
-class BaselineAgent:
+# reproducibility
+random.seed(42)
+np.random.seed(42)
+
+class InferenceAgent:
     def __init__(self):
-        # simulate API key usage (required by spec)
-        self.api_key = os.getenv("OPENAI_API_KEY", "dummy-key")
+        self.api_base = os.getenv("API_BASE_URL", "dummy")
+        self.model = os.getenv("MODEL_NAME", "dummy")
+        self.token = os.getenv("HF_TOKEN", "dummy")
 
     def act(self, state):
         is_urgent, is_work, is_spammy = state
 
-        # deterministic policy
         if is_spammy == 1:
             return 2
         elif is_urgent == 1 or is_work == 1:
@@ -24,14 +25,13 @@ class BaselineAgent:
             return 1
 
 
-def run_baseline():
-    agent = BaselineAgent()
+def run_inference():
     results = evaluate_all_tasks()
 
-    print("Baseline Evaluation Results:")
+    print("Inference Results:")
     for task, score in results.items():
         print(f"{task}: {score:.3f}")
 
 
 if __name__ == "__main__":
-    run_baseline()
+    run_inference()
