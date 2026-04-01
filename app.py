@@ -1,17 +1,27 @@
-from tasks import evaluate_all_tasks
-import random
-import numpy as np
+from fastapi import FastAPI
+from env import EmailEnv
 
-# ensure reproducibility
-random.seed(42)
-np.random.seed(42)
+app = FastAPI()
 
-def main():
-    results = evaluate_all_tasks()
+env = EmailEnv()
 
-    print("Hugging Face Demo Output:")
-    for task, score in results.items():
-        print(f"{task}: {score:.3f}")
 
-if __name__ == "__main__":
-    main()
+@app.post("/reset")
+def reset():
+    state = env.reset()
+    return {"state": state.tolist()}
+
+
+@app.post("/step")
+def step(action: int):
+    next_state, reward, done, info = env.step(action)
+    return {
+        "state": next_state.tolist(),
+        "reward": reward,
+        "done": done
+    }
+
+
+@app.get("/")
+def root():
+    return {"message": "Email RL Environment is running"}
