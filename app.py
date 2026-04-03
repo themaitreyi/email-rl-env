@@ -6,14 +6,14 @@ app = FastAPI()
 env = EmailEnv()
 
 
-@app.post("/reset")
+@app.api_route("/reset", methods=["GET", "POST"])
 def reset():
     state = env.reset()
     return {"state": state.tolist()}
 
 
-@app.post("/step")
-def step(action: int):
+@app.api_route("/step", methods=["GET", "POST"])
+def step(action: int = 0):
     next_state, reward, done, info = env.step(action)
     return {
         "state": next_state.tolist(),
