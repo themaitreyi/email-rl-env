@@ -1,0 +1,18 @@
+[project]
+name = "email-rl-env"
+version = "0.1.0"
+description = "Smart Email Prioritization RL Environment"
+authors = [
+    { name = "themaitreyi" }
+]
+dependencies = [
+    "fastapi",
+    "uvicorn",
+    "numpy",
+    "gym",
+    "openai"
+]
+
+[tool.openenv]
+env_module = "env"
+env_class = "EmailEnv"
