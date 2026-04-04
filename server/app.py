@@ -2,7 +2,6 @@ from fastapi import FastAPI
 from env import EmailEnv
 
 app = FastAPI()
-
 env = EmailEnv()
 
 def main():
@@ -21,3 +20,8 @@ def step(action: int = 0):
         "reward": reward,
         "done": done
     }
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run("server.app:app", host="0.0.0.0", port=7860)
