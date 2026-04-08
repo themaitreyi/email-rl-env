@@ -2,26 +2,28 @@ from fastapi import FastAPI
 from env import EmailEnv
 
 app = FastAPI()
+
 env = EmailEnv()
 
-def main():
-    return app
 
 @app.post("/reset")
 def reset():
-    state = env.reset()
+    state, _ = env.reset()
     return {"state": state.tolist()}
 
+
 @app.post("/step")
-def step(action: int = 0):
-    next_state, reward, done, info = env.step(action)
+def step(action: int):
+    state, reward, terminated, truncated, info = env.step(action)
+    done = terminated or truncated
     return {
-        "state": next_state.tolist(),
+        "state": state.tolist(),
         "reward": reward,
-        "done": done
+        "done": done,
+        "info": info,
     }
 
 
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run("server.app:app", host="0.0.0.0", port=7860)
+@app.get("/")
+def root():
+    return {"status": "running"}
