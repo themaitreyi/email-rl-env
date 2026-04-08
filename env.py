@@ -4,12 +4,14 @@ import numpy as np
 import random
 from dataclasses import dataclass
 
+
 # Typed observation model
 @dataclass
 class Observation:
     is_urgent: float
     is_work: float
     is_spammy: float
+
 
 # Typed action model
 @dataclass
@@ -22,7 +24,9 @@ class EmailEnv(gym.Env):
         super().__init__()
 
         self.action_space = spaces.Discrete(3)
-        self.observation_space = spaces.Box(low=0, high=1, shape=(3,), dtype=np.float32)
+        self.observation_space = spaces.Box(
+            low=0, high=1, shape=(3,), dtype=np.float32
+        )
 
         self.state_vec = None
         self.correct_label = None
@@ -31,14 +35,13 @@ class EmailEnv(gym.Env):
         self.step_count = 0
         self.max_steps = 3
 
-        self.seed(42)
-
-    def seed(self, seed=None):
-        random.seed(seed)
-        np.random.seed(seed)
+        random.seed(42)
+        np.random.seed(42)
 
     def generate_email(self):
-        difficulty = self.current_difficulty or random.choice(["easy", "medium", "hard"])
+        difficulty = self.current_difficulty or random.choice(
+            ["easy", "medium", "hard"]
+        )
 
         if difficulty == "easy":
             is_spammy = random.choice([0, 1])
@@ -54,7 +57,9 @@ class EmailEnv(gym.Env):
             is_work = random.choice([0, 1])
             is_spammy = random.choice([0, 1])
 
-            state = np.array([is_urgent, is_work, is_spammy], dtype=np.float32)
+            state = np.array(
+                [is_urgent, is_work, is_spammy], dtype=np.float32
+            )
 
             if is_spammy:
                 label = 2
@@ -64,11 +69,14 @@ class EmailEnv(gym.Env):
                 label = 1
 
         else:  # hard
-            state = np.array([
-                random.choice([0, 1]),
-                random.choice([0, 1]),
-                random.choice([0, 1])
-            ], dtype=np.float32)
+            state = np.array(
+                [
+                    random.choice([0, 1]),
+                    random.choice([0, 1]),
+                    random.choice([0, 1]),
+                ],
+                dtype=np.float32,
+            )
 
             if state[2] == 1 and state[0] == 1:
                 label = 1
@@ -85,27 +93,29 @@ class EmailEnv(gym.Env):
         return Observation(
             is_urgent=float(self.state_vec[0]),
             is_work=float(self.state_vec[1]),
-            is_spammy=float(self.state_vec[2])
+            is_spammy=float(self.state_vec[2]),
         )
 
+    # ✅ FIXED RESET (gymnasium compliant)
     def reset(self, seed=None, options=None):
         super().reset(seed=seed)
 
         self.step_count = 0
         self.state_vec, self.correct_label = self.generate_email()
 
-        return self.state_vec.astype(np.float32)
+        return self.state_vec.astype(np.float32), {}
 
+    # ✅ FIXED STEP (gymnasium compliant)
     def step(self, action):
         self.step_count += 1
 
-        # SAFE action handling (no crash)
+        # Safe action handling
         try:
             if isinstance(action, Action):
                 action = action.label
             action = int(action)
         except:
-            action = 1  # default safe action
+            action = 1  # fallback safe action
 
         # Reward logic
         if action == self.correct_label:
@@ -118,14 +128,21 @@ class EmailEnv(gym.Env):
             else:
                 reward = 0.0
 
-        done = self.step_count >= self.max_steps
+        terminated = self.step_count >= self.max_steps
+        truncated = False
 
-        if not done:
+        if not terminated:
             self.state_vec, self.correct_label = self.generate_email()
 
         info = {
             "difficulty": self.current_difficulty,
-            "step": self.step_count
+            "step": self.step_count,
         }
 
-        return self.state_vec.astype(np.float32), float(reward), bool(done), info
+        return (
+            self.state_vec.astype(np.float32),
+            float(reward),
+            bool(terminated),
+            bool(truncated),
+            info,
+        )
