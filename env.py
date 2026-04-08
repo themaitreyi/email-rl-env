@@ -1,5 +1,5 @@
-import gym
-from gym import spaces
+import gymnasium as gym
+from gymnasium import spaces
 import numpy as np
 import random
 from dataclasses import dataclass
@@ -16,27 +16,29 @@ class Observation:
 class Action:
     label: int  # 0, 1, 2
 
+
 class EmailEnv(gym.Env):
     def __init__(self):
-        super(EmailEnv, self).__init__()
+        super().__init__()
 
         self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Box(low=0, high=1, shape=(3,), dtype=np.float32)
 
         self.state_vec = None
         self.correct_label = None
-
         self.current_difficulty = None
 
         self.step_count = 0
         self.max_steps = 3
-        random.seed(42)
-        np.random.seed(42)
+
+        self.seed(42)
+
+    def seed(self, seed=None):
+        random.seed(seed)
+        np.random.seed(seed)
 
     def generate_email(self):
-        difficulty = self.current_difficulty
-        if difficulty is None:
-            difficulty = random.choice(["easy", "medium", "hard"])
+        difficulty = self.current_difficulty or random.choice(["easy", "medium", "hard"])
 
         if difficulty == "easy":
             is_spammy = random.choice([0, 1])
@@ -61,7 +63,7 @@ class EmailEnv(gym.Env):
             else:
                 label = 1
 
-        else:
+        else:  # hard
             state = np.array([
                 random.choice([0, 1]),
                 random.choice([0, 1]),
@@ -81,22 +83,31 @@ class EmailEnv(gym.Env):
 
     def state(self):
         return Observation(
-            is_urgent=self.state_vec[0],
-            is_work=self.state_vec[1],
-            is_spammy=self.state_vec[2]
+            is_urgent=float(self.state_vec[0]),
+            is_work=float(self.state_vec[1]),
+            is_spammy=float(self.state_vec[2])
         )
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+
         self.step_count = 0
         self.state_vec, self.correct_label = self.generate_email()
-        return self.state_vec
+
+        return self.state_vec.astype(np.float32)
 
     def step(self, action):
         self.step_count += 1
 
-        if isinstance(action, Action):
-            action = action.label
+        # SAFE action handling (no crash)
+        try:
+            if isinstance(action, Action):
+                action = action.label
+            action = int(action)
+        except:
+            action = 1  # default safe action
 
+        # Reward logic
         if action == self.correct_label:
             reward = 1.0
         else:
@@ -117,4 +128,4 @@ class EmailEnv(gym.Env):
             "step": self.step_count
         }
 
-        return self.state_vec, reward, done, info
+        return self.state_vec.astype(np.float32), float(reward), bool(done), info

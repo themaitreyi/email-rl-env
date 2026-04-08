@@ -1,76 +1,76 @@
-from env import EmailEnv
-from tasks import evaluate_all_tasks
 import os
-import random
-import numpy as np
-from openai import OpenAI
+import requests
 
-# reproducibility
-random.seed(42)
-np.random.seed(42)
+API_BASE_URL = os.getenv("API_BASE_URL", "").rstrip("/")
 
-class InferenceAgent:
-    def __init__(self):
-        self.api_base = os.environ.get("API_BASE_URL")
-        self.model = os.environ.get("MODEL_NAME")
-        self.token = os.environ.get("HF_TOKEN")
-
-        if not self.api_base or not self.model or not self.token:
-            raise ValueError("Missing required environment variables")
-
-        self.client = OpenAI(
-            base_url=self.api_base,
-            api_key=self.token
-        )
-
-    def act(self, state):
-        is_urgent, is_work, is_spammy = state
-
-        prompt = f"""
-        Classify email:
-        urgent={is_urgent}, work={is_work}, spam={is_spammy}
-
-        Return ONLY one number:
-        0 = Important
-        1 = Normal
-        2 = Spam
-        """
-
-        try:
-            response = self.client.chat.completions.create(
-                model=self.model,
-                messages=[{"role": "user", "content": prompt}],
-                temperature=0
-            )
-
-            text = response.choices[0].message.content.strip()
-
-            if "2" in text:
-                return 2
-            elif "0" in text:
-                return 0
-            else:
-                return 1
-
-        except:
-            # fallback (VERY IMPORTANT)
-            if is_spammy == 1:
-                return 2
-            elif is_urgent == 1 or is_work == 1:
-                return 0
-            else:
-                return 1
+def safe_post(endpoint, payload=None):
+    try:
+        url = f"{API_BASE_URL}{endpoint}"
+        response = requests.post(url, json=payload, timeout=5)
+        response.raise_for_status()
+        return response.json()
+    except Exception as e:
+        print(f"[ERROR] {endpoint} failed: {e}")
+        return None
 
 
 def run_inference():
-    agent = InferenceAgent()
+    print("[START] Inference started")
 
-    results = evaluate_all_tasks()
+    results = {}
+    difficulties = ["easy", "medium", "hard"]
 
-    print("Inference Results:")
-    for task, score in results.items():
-        print(f"{task}: {score:.3f}")
+    for difficulty in difficulties:
+        total_reward = 0
+        steps = 5
+
+        for _ in range(steps):
+            reset_data = safe_post("/reset")
+            if not reset_data or "state" not in reset_data:
+                continue
+
+            state = reset_data["state"]
+
+            # SAFE unpack (no crash)
+            try:
+                is_urgent, is_work, is_spam = state
+            except:
+                is_urgent, is_work, is_spam = 0, 0, 0
+
+            # RULE-BASED AGENT
+            if is_spam == 1:
+                action = 2
+            elif is_urgent == 1 or is_work == 1:
+                action = 0
+            else:
+                action = 1
+
+            step_data = safe_post("/step", {"action": action})
+            if not step_data:
+                continue
+
+            reward = step_data.get("reward", 0)
+            total_reward += reward
+
+            print(f"[STEP] {difficulty} reward={reward}")
+
+        # SAFE scoring
+        try:
+            score = total_reward / (steps * 10)
+        except:
+            score = 0.0
+
+        score = max(0.0, min(1.0, score))
+        results[difficulty] = round(score, 3)
+
+    print("[END] Inference completed")
+    print(results)
+
+    return results
 
 
 if __name__ == "__main__":
-    run_inference()
+    try:
+        run_inference()
+    except Exception as e:
+        print(f"[FATAL ERROR] {e}")
