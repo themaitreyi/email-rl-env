@@ -4,9 +4,15 @@ WORKDIR /app
 
 COPY . /app
 
-# Install dependencies
+# Install ALL dependencies (IMPORTANT)
 RUN pip install --no-cache-dir --upgrade pip
-RUN pip install --no-cache-dir gymnasium numpy fastapi uvicorn requests
+RUN pip install --no-cache-dir \
+    gymnasium \
+    numpy \
+    fastapi \
+    uvicorn \
+    requests \
+    openai
 
 EXPOSE 7860
 
